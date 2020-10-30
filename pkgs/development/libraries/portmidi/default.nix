@@ -1,4 +1,4 @@
-{ stdenv, fetchurl, unzip, cmake, /*jdk,*/ alsaLib }:
+{ stdenv, lib, fetchurl, fetchpatch, unzip, cmake, /*jdk,*/ alsaLib }:
 
 stdenv.mkDerivation rec {
   pname = "portmidi";
@@ -23,11 +23,17 @@ stdenv.mkDerivation rec {
   ];
 
   # XXX: This is to deactivate Java support.
-  patches = stdenv.lib.singleton (fetchurl {
-    url = "https://raw.github.com/Rogentos/argent-gentoo/master/media-libs/"
-        + "portmidi/files/portmidi-217-cmake-libdir-java-opts.patch";
-    sha256 = "1jbjwan61iqq9fqfpq2a4fd30k3clg7a6j0gfgsw87r8c76kqf6h";
-  });
+  patches = stdenv.lib.singleton [
+    (fetchpatch {
+        url = "https://raw.github.com/Rogentos/argent-gentoo/master/media-libs/"
+            + "portmidi/files/portmidi-217-cmake-libdir-java-opts.patch";
+        sha256 = "1jbjwan61iqq9fqfpq2a4fd30k3clg7a6j0gfgsw87r8c76kqf6h";
+    })
+    (fetchpatch {
+        url = "https://gist.githubusercontent.com/rryan/3b92d65242d358d1fb94/raw/e345fdaa635f3afa1ce21c4253782133379b74f0/portmidi.patch";
+        sha256 = "16grmcqkci8azfk560m06v37q7lp39xgym0qz57ppqi3mcv9ar8y";
+    })
+  ];
 
   postPatch = ''
     sed -i -e 's|/usr/local/|'"$out"'|' -e 's|/usr/share/|'"$out"'/share/|' \
@@ -44,7 +50,7 @@ stdenv.mkDerivation rec {
     ln -s libportmidi.so "$out/lib/libporttime.so"
   '';
 
-  buildInputs = [ unzip cmake /*jdk*/ alsaLib ];
+  buildInputs = [ unzip cmake /*jdk*/ ] ++ lib.optionals stdenv.hostPlatform.isLinux [ alsaLib ];
 
   hardeningDisable = [ "format" ];
 
@@ -52,6 +58,6 @@ stdenv.mkDerivation rec {
     homepage = "http://portmedia.sourceforge.net/portmidi/";
     description = "Platform independent library for MIDI I/O";
     license = stdenv.lib.licenses.mit;
-    platforms = stdenv.lib.platforms.linux;
+    platforms = stdenv.lib.platforms.unix;
   };
 }
